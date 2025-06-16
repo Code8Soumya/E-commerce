@@ -1,7 +1,7 @@
 import express, { json, urlencoded, Request, Response } from "express";
 import cors from "cors";
 const port = process.env.PORT;
-import db from "./db";
+import db from "./config/db";
 import jwt from "jsonwebtoken";
 
 var corsOptions = {

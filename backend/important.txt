@@ -1,0 +1,86 @@
+__Instructions for the Model:__
+
+Based on the provided `<EntityName>` and its SQL schema, generate a TypeScript file named `<entityName>Model.ts` (e.g., `productModel.ts`) with the following structure and features:
+
+__1. Imports:__
+
+- Import `pool` from `../config/db` (assume this is a `mysql2/promise` pool).
+- Import necessary types from `mysql2/promise` (e.g., `RowDataPacket`, `ResultSetHeader`, `PoolConnection`).
+
+__2. TypeScript Interfaces & Types:__
+
+- __Main Interface:__ `export interface <EntityName> { ... }`
+
+  - Define properties based on the SQL table columns, using appropriate TypeScript types (e.g., `number`, `string`, `Date`, `string | null`).
+  - Ensure `createdAt` and `updatedAt` (if present) are typed as `Date`.
+
+- __Create Input Interface:__ `export interface Create<EntityName>Input { ... }`
+
+  - Include all required fields for creating a new entity.
+  - Optional fields (like `description` if nullable) should be marked with `?`. Exclude auto-generated fields like `id`, `createdAt`, `updatedAt`.
+
+- __Update Input Type:__ `export type Update<EntityName>Input = Partial<Pick<<EntityName>, <updatable_fields>>>;`
+  - `<updatable_fields>` should be a union of strings representing the names of fields that can be updated (e.g., `'name' | 'description' | 'price'`).
+
+__3. Helper Function:__
+
+- `const mapRowTo<EntityName> = (row: RowDataPacket): <EntityName> => ({ ... });`
+
+  - This function takes a `RowDataPacket` and maps it to an `<EntityName>` object.
+  - Handle type conversions, especially for `Date` fields (e.g., `createdAt: new Date(row.createdAt)`).
+  - Add a JSDoc comment explaining its purpose, parameters, and return value.
+
+__4. CRUD Functions (and other finders):__
+
+- Implement the following asynchronous, exported functions. Each function should:
+
+  - Manage database connections: acquire from the pool, use it, and release it in a `finally` block.
+  - Implement robust error handling using `try...catch` blocks.
+  - Log errors to the console with context (e.g., `[<EntityName>Model.ts] Error in create<EntityName>...`).
+  - Throw user-friendly errors (e.g., `throw new Error("Could not create <entityName>.");`).
+  - Include comprehensive JSDoc comments for each function (parameters, return type, potential errors).
+  - Use parameterized SQL queries to prevent SQL injection.
+
+- __`create<EntityName>(data: Create<EntityName>Input): Promise<<EntityName>>`__
+
+  - Use a database transaction (`beginTransaction`, `commit`, `rollback`).
+  - Insert the new entity into the database.
+  - Retrieve the newly created entity (e.g., by calling `find<EntityName>ById` with the `insertId` using the same transaction connection) and return it.
+  - Rollback on any error or if retrieval fails.
+
+- __`find<EntityName>ById(id: number, internalConnection?: PoolConnection): Promise<<EntityName> | null>`__
+
+  - Select an entity by its primary key.
+  - Return the entity object or `null` if not found.
+  - The `internalConnection` parameter allows this function to be used within a larger transaction without managing its own connection lifecycle (useful for `create` and `update`). If `internalConnection` is provided, do not release it within this function.
+
+- __`findAll<EntityName>s(): Promise<<EntityName>[]>`__
+
+  - Select all entities from the table.
+  - Return an array of entity objects.
+
+- __(If applicable) `find<EntityName>sBy<ForeignKeyName>(<foreignKeyName>Id: number): Promise<<EntityName>[]>`__
+
+  - Example: `findProductsByStoreId(storeId: number): Promise<Product[]>`
+  - Select entities based on a foreign key.
+
+- __`update<EntityName>(id: number, updates: Update<EntityName>Input): Promise<<EntityName>>`__
+
+  - Use a database transaction.
+  - Dynamically build the `SET` clause based on the fields provided in the `updates` object. Only include fields that are actually present in `updates` and are valid for update.
+  - If no valid fields to update are provided, retrieve and return the current entity (or throw an error if not found).
+  - If the update affects 0 rows (and the entity should exist), throw an error (e.g., "Entity not found or no changes made.").
+  - After a successful update, retrieve the updated entity (using the same transaction connection) and return it.
+  - Rollback on any error.
+
+- __`delete<EntityName>(id: number): Promise<void>`__
+
+  - Use a database transaction.
+  - Delete an entity by its primary key.
+  - If `affectedRows` is 0, throw an error indicating the entity was not found.
+  - Rollback on any error.
+
+__5. Logging and Error Messages:__
+
+- Console error messages should be specific, including the model file name and function name (e.g., `console.error("[<EntityName>Model.ts] create<EntityName>: Error occurred. Rolling back transaction...");`).
+- Errors thrown to the caller should be generic but informative (e.g., `throw new Error("Could not complete <entityName> update.");`).
