@@ -9,6 +9,8 @@ export interface User {
     createdAt: Date;
 }
 
+export type UserOutput = Omit<User, "passwordHash">;
+
 export interface CreateUserInput {
     name: string;
     email: string;
@@ -35,10 +37,10 @@ const mapRowToUser = (row: RowDataPacket): User => ({
  * Creates a new user in the database.
  * Uses a transaction to ensure atomicity.
  * @param {CreateUserInput} data - The data for the new user.
- * @returns {Promise<User>} The newly created user object.
+ * @returns {Promise<UserOutput>} The newly created user object, without the password hash.
  * @throws {Error} If user creation fails or the new user cannot be retrieved.
  */
-export async function createUser(data: CreateUserInput): Promise<User> {
+export async function createUser(data: CreateUserInput): Promise<UserOutput> {
     const { name, email, passwordHash } = data;
     const sql = "INSERT INTO `User` (`name`, `email`, `passwordHash`) VALUES (?, ?, ?)";
     let connection: PoolConnection | null = null;
@@ -93,13 +95,13 @@ export async function createUser(data: CreateUserInput): Promise<User> {
  * Can use an existing database connection if provided (for transactions).
  * @param {number} id - The ID of the user to find.
  * @param {PoolConnection} [internalConnection] - Optional existing database connection.
- * @returns {Promise<User | null>} The user object if found, otherwise null.
+ * @returns {Promise<UserOutput | null>} The user object (without password hash) if found, otherwise null.
  * @throws {Error} If there's an issue querying the database.
  */
 export async function findUserById(
     id: number,
     internalConnection?: PoolConnection
-): Promise<User | null> {
+): Promise<UserOutput | null> {
     const sql = "SELECT * FROM `User` WHERE `id` = ?";
     let connection: PoolConnection | null = null;
 
@@ -110,7 +112,10 @@ export async function findUserById(
         const [rows] = await connection.execute<RowDataPacket[]>(sql, [id]);
 
         if (rows.length > 0) {
-            return mapRowToUser(rows[0]);
+            const user: User = mapRowToUser(rows[0]);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { passwordHash, ...userOutput } = user;
+            return userOutput;
         }
         return null;
     } catch (error) {
@@ -154,7 +159,7 @@ export async function findUserByEmail(
             `[userModel.ts] findUserByEmail: Error finding user by email ${email}:`,
             error
         );
-        throw new Error(`Could not find user by email ${email}.`);
+        return null;
     } finally {
         if (connection && !internalConnection) {
             connection.release();
@@ -191,10 +196,13 @@ export async function findAllUsers(): Promise<User[]> {
  * Dynamically builds the SET clause based on provided updates.
  * @param {number} id - The ID of the user to update.
  * @param {UpdateUserInput} updates - An object containing the fields to update.
- * @returns {Promise<User>} The updated user object.
+ * @returns {Promise<UserOutput>} The updated user object, without the password hash.
  * @throws {Error} If the user is not found, no changes are made, or the update fails.
  */
-export async function updateUser(id: number, updates: UpdateUserInput): Promise<User> {
+export async function updateUser(
+    id: number,
+    updates: UpdateUserInput
+): Promise<UserOutput> {
     const fieldsToUpdate: string[] = [];
     const values: (string | number)[] = [];
     let connection: PoolConnection | null = null;

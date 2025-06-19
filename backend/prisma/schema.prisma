@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Store {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  ownerId         String
+  stripeAccountId String?
+  createdAt       DateTime @default(now())
+  isActive        Boolean  @default(true)
+
+  owner           User     @relation(fields: [ownerId], references: [id])
+  products        Product[]
+}
+
+model Product {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  price        Float
+  stock        Int
+  imageUrl     String
+  isPublished  Boolean   @default(true)
+  storeId      String
+  categoryId   String?
+  createdAt    DateTime  @default(now())
+
+  store        Store     @relation(fields: [storeId], references: [id],onDelete: Cascade)
+  category     Category? @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+  cartItems    CartItem[]
+  reviews      Review[]
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  parentId  String?
+  createdAt DateTime   @default(now())
+
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  products  Product[]
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+
+  user      User        @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String    @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+
+  cart      Cart      @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id                String       @id @default(uuid())
+  userId            String
+  totalAmount       Float
+  status            OrderStatus  @default(PENDING)
+  shippingAddressId String
+  billingAddressId  String
+  createdAt         DateTime     @default(now())
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shippingAddress   Address      @relation("ShippingAddress", fields: [shippingAddressId], references: [id], onDelete: Restrict)
+  billingAddress    Address      @relation("BillingAddress", fields: [billingAddressId], references: [id], onDelete: Restrict)
+  items             OrderItem[]
+  payment           Payment?
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  fullName    String
+  street      String
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String
+
+  user        User     @relation(fields: [userId], references: [id])
+  shippingFor Order[]  @relation("ShippingAddress")
+  billingFor  Order[]  @relation("BillingAddress")
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  amount      Float
+  status      String
+  provider    String
+  providerId  String
+  createdAt   DateTime @default(now())
+
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id        String     @id @default(dbgenerated()) // This must match Supabase auth.users.id UUID
+  role      Role       @default(CUSTOMER)
+  createdAt DateTime   @default(now())
+  
+  orders     Order[]
+  cart       Cart?
+  stores     Store[]
+  addresses  Address[]
+  reviews    Review[]
+}

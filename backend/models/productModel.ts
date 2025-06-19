@@ -10,7 +10,19 @@ export interface Product {
     price: number;
     stock: number;
     image: Buffer;
+    isPublished?: boolean; // Added isPublished
     createdAt: Date;
+}
+
+// Assumed Category interface (based on productRoutes.ts including category)
+export interface Category {
+    id: number;
+    name: string;
+    // Add other category fields as necessary
+}
+
+export interface ProductWithCategory extends Product {
+    category?: Category | null;
 }
 
 export interface CreateProductInput {
@@ -43,8 +55,23 @@ const mapRowToProduct = (row: RowDataPacket): Product => ({
     price: row.price,
     stock: row.stock,
     image: row.image, // Added for LONGBLOB
+    isPublished: row.isPublished === undefined ? false : Boolean(row.isPublished), // Assuming default false if not present
     createdAt: new Date(row.createdAt),
 });
+
+const mapRowToProductWithCategory = (row: RowDataPacket): ProductWithCategory => {
+    const product = mapRowToProduct(row) as ProductWithCategory;
+    if (row.category_id && row.category_name) {
+        product.category = {
+            id: row.category_id,
+            name: row.category_name,
+            // map other category fields if joined and selected
+        };
+    } else {
+        product.category = null;
+    }
+    return product;
+};
 
 // -------------------- CRUD Functions --------------------
 
@@ -317,6 +344,76 @@ export const updateProduct = async (
             throw error; // Re-throw specific errors
         }
         throw new Error("Could not complete product update.");
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+/**
+ * Finds products by their owner's ID by joining with the Store table.
+ * @param {number} ownerId - The ID of the owner.
+ * @returns {Promise<Product[]>} An array of products belonging to stores owned by the user.
+ * @throws {Error} If there is a database query error.
+ */
+export const findProductsByOwnerId = async (ownerId: number): Promise<Product[]> => {
+    let connection: PoolConnection | null = null;
+    try {
+        connection = await pool.getConnection();
+        // Ensure backticks around table and column names if they are reserved words or contain special characters
+        const sql = `
+            SELECT p.*
+            FROM \`Product\` p
+            JOIN \`Store\` s ON p.\`storeId\` = s.\`id\`
+            WHERE s.\`ownerId\` = ?
+            ORDER BY p.\`createdAt\` DESC
+        `;
+        const [rows] = await connection.execute<RowDataPacket[]>(sql, [ownerId]);
+        return rows.map(mapRowToProduct);
+    } catch (error) {
+        console.error(
+            `[ProductModel.ts] findProductsByOwnerId: Error querying products for ownerId ${ownerId}.`,
+            error
+        );
+        throw new Error("Error fetching products by owner ID.");
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+/**
+ * Retrieves all published products from the database, including their category.
+ * @returns {Promise<ProductWithCategory[]>} An array of all published products with category details.
+ * @throws {Error} If there is a database query error.
+ */
+export const findAllPublishedProducts = async (): Promise<ProductWithCategory[]> => {
+    let connection: PoolConnection | null = null;
+    try {
+        connection = await pool.getConnection();
+        // Assuming 'Category' table exists and 'Product.categoryId' links to 'Category.id'
+        // Assuming 'Product' table has an 'isPublished' column.
+        const sql = `
+            SELECT 
+                p.*, 
+                c.\`id\` AS category_id, 
+                c.\`name\` AS category_name
+                -- Select other category fields if needed, e.g., c.description AS category_description
+            FROM \`Product\` p
+            LEFT JOIN \`Category\` c ON p.\`categoryId\` = c.\`id\`
+            WHERE p.\`isPublished\` = TRUE  -- Or 1 if boolean is stored as int
+            ORDER BY p.\`createdAt\` DESC
+        `;
+        const [rows] = await connection.execute<RowDataPacket[]>(sql);
+        return rows.map(mapRowToProductWithCategory);
+    } catch (error) {
+        console.error(
+            "[ProductModel.ts] findAllPublishedProducts: Error querying published products.",
+            error
+        );
+        throw new Error("Error fetching published products.");
     } finally {
         if (connection) {
             connection.release();
