@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { findUserById, UserOutput, User } from "../models/userModel"; // Import UserOutput
+import { findUserById, UserOutput } from "../models/userModel"; // Import UserOutput, removed User
 
 // It's crucial to use a strong, unique secret and store it in environment variables
 const JWT_SECRET = process.env.JWT_SECRET;

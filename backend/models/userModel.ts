@@ -37,10 +37,9 @@ const mapRowToUser = (row: RowDataPacket): User => ({
  * Creates a new user in the database.
  * Uses a transaction to ensure atomicity.
  * @param {CreateUserInput} data - The data for the new user.
- * @returns {Promise<UserOutput>} The newly created user object, without the password hash.
- * @throws {Error} If user creation fails or the new user cannot be retrieved.
+ * @returns {Promise<UserOutput | null>} The newly created user object (without password hash), or null on failure.
  */
-export async function createUser(data: CreateUserInput): Promise<UserOutput> {
+export async function createUser(data: CreateUserInput): Promise<UserOutput | null> {
     const { name, email, passwordHash } = data;
     const sql = "INSERT INTO `User` (`name`, `email`, `passwordHash`) VALUES (?, ?, ?)";
     let connection: PoolConnection | null = null;
@@ -65,24 +64,27 @@ export async function createUser(data: CreateUserInput): Promise<UserOutput> {
                 // This case should ideally not be reached if insertId is valid
                 // and findUserById is correct.
                 console.error(
-                    "[userModel.ts] createUser: Failed to retrieve user after creation (within transaction)."
+                    "[userModel.ts] createUser: Failed to retrieve user after creation or findUserById failed (within transaction)."
                 );
-                await connection.rollback(); // Rollback before throwing
-                throw new Error("Failed to retrieve user after creation.");
+                await connection.rollback();
+                return null;
             }
         } else {
-            await connection.rollback(); // Rollback before throwing
-            throw new Error("User creation failed, no insertId returned.");
+            console.error(
+                "[userModel.ts] createUser: User creation failed, no insertId returned."
+            );
+            await connection.rollback();
+            return null;
         }
     } catch (error) {
         if (connection) {
-            console.error(
-                "[userModel.ts] createUser: Error occurred. Rolling back transaction..."
-            );
+            // console.error already part of the original log, no need to repeat if it's the same message
+            // However, ensuring it's logged before returning null is key.
+            // The existing console.error("[userModel.ts] Error in createUser:", error); handles this.
             await connection.rollback();
         }
-        console.error("[userModel.ts] Error in createUser:", error);
-        throw new Error("Could not create user.");
+        console.error("[userModel.ts] Error in createUser:", error); // This will log the error
+        return null;
     } finally {
         if (connection) {
             connection.release();
@@ -96,13 +98,12 @@ export async function createUser(data: CreateUserInput): Promise<UserOutput> {
  * @param {number} id - The ID of the user to find.
  * @param {PoolConnection} [internalConnection] - Optional existing database connection.
  * @returns {Promise<UserOutput | null>} The user object (without password hash) if found, otherwise null.
- * @throws {Error} If there's an issue querying the database.
  */
 export async function findUserById(
     id: number,
     internalConnection?: PoolConnection
 ): Promise<UserOutput | null> {
-    const sql = "SELECT * FROM `User` WHERE `id` = ?";
+    const sql = "SELECT `id`, `name`, `email`, `createdAt` FROM `User` WHERE `id` = ?"; // Select specific fields
     let connection: PoolConnection | null = null;
 
     try {
@@ -112,10 +113,14 @@ export async function findUserById(
         const [rows] = await connection.execute<RowDataPacket[]>(sql, [id]);
 
         if (rows.length > 0) {
-            const user: User = mapRowToUser(rows[0]);
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { passwordHash, ...userOutput } = user;
-            return userOutput;
+            const row = rows[0];
+            // Directly map to UserOutput
+            return {
+                id: row.id,
+                name: row.name,
+                email: row.email,
+                createdAt: new Date(row.createdAt),
+            };
         }
         return null;
     } catch (error) {
@@ -123,7 +128,7 @@ export async function findUserById(
             `[userModel.ts] findUserById: Error finding user by ID ${id}:`,
             error
         );
-        throw new Error(`Could not find user by ID ${id}.`);
+        return null; // Return null on error
     } finally {
         // Only release connection if it was established within this function
         if (connection && !internalConnection) {
@@ -138,7 +143,6 @@ export async function findUserById(
  * @param {string} email - The email of the user to find.
  * @param {PoolConnection} [internalConnection] - Optional existing database connection.
  * @returns {Promise<User | null>} The user object if found, otherwise null.
- * @throws {Error} If there's an issue querying the database.
  */
 export async function findUserByEmail(
     email: string,
@@ -168,21 +172,26 @@ export async function findUserByEmail(
 }
 
 /**
- * Retrieves all users from the database.
- * @returns {Promise<User[]>} An array of user objects.
- * @throws {Error} If there's an issue querying the database.
+ * Retrieves all users from the database, without password hashes.
+ * @returns {Promise<UserOutput[] | null>} An array of user objects (without password hashes), or null on error.
  */
-export async function findAllUsers(): Promise<User[]> {
-    const sql = "SELECT * FROM `User`";
+export async function findAllUsers(): Promise<UserOutput[] | null> {
+    const sql = "SELECT `id`, `name`, `email`, `createdAt` FROM `User`"; // Select specific fields
     let connection: PoolConnection | null = null;
 
     try {
         connection = await pool.getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(sql);
-        return rows.map(mapRowToUser);
+        return rows.map((row: RowDataPacket) => ({
+            // Map directly to UserOutput
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            createdAt: new Date(row.createdAt),
+        }));
     } catch (error) {
         console.error("[userModel.ts] findAllUsers: Error retrieving all users:", error);
-        throw new Error("Could not retrieve all users.");
+        return null; // Return null on error
     } finally {
         if (connection) {
             connection.release();
@@ -196,13 +205,9 @@ export async function findAllUsers(): Promise<User[]> {
  * Dynamically builds the SET clause based on provided updates.
  * @param {number} id - The ID of the user to update.
  * @param {UpdateUserInput} updates - An object containing the fields to update.
- * @returns {Promise<UserOutput>} The updated user object, without the password hash.
- * @throws {Error} If the user is not found, no changes are made, or the update fails.
+ * @returns {Promise<boolean>} True if update was successful, false otherwise.
  */
-export async function updateUser(
-    id: number,
-    updates: UpdateUserInput
-): Promise<UserOutput> {
+export async function updateUser(id: number, updates: UpdateUserInput): Promise<boolean> {
     const fieldsToUpdate: string[] = [];
     const values: (string | number)[] = [];
     let connection: PoolConnection | null = null;
@@ -216,14 +221,13 @@ export async function updateUser(
     });
 
     if (fieldsToUpdate.length === 0) {
-        // No valid fields to update, retrieve and return current user or throw if not found
-        const currentUser = await findUserById(id); // Uses its own connection management
-        if (!currentUser) {
-            throw new Error(
-                `User with id ${id} not found, and no update fields provided.`
-            );
-        }
-        return currentUser; // Return current user if no updates are to be made
+        console.warn(`[userModel.ts] updateUser ID: ${id}: No update fields provided.`);
+        // Optionally, check if user exists to provide more context, but problem implies just return false.
+        // const currentUser = await findUserById(id);
+        // if (!currentUser) {
+        //     console.error(`[userModel.ts] updateUser ID: ${id}: User not found and no update fields provided.`);
+        // }
+        return false; // No update performed
     }
 
     values.push(id); // Add id for the WHERE clause
@@ -239,55 +243,39 @@ export async function updateUser(
             // Check if user exists to differentiate between "not found" and "no actual change"
             const userExists = await findUserById(id, connection);
             if (!userExists) {
+                console.warn(
+                    `[userModel.ts] updateUser ID: ${id}: User not found for update.`
+                );
                 await connection.rollback();
-                throw new Error(`User with id ${id} not found for update.`);
+                return false;
             }
             // If user exists but affectedRows is 0, it means data was same
-            // In this case, we can commit and return the user
-            // Or, if strict "change must occur" is needed, throw error.
-            // For now, let's assume "no change" is not an error if user exists.
-            // The prompt says: "If the update affects 0 rows (and the entity should exist), throw an error"
-            // So, if userExists, this means no actual data change.
             console.warn(
-                `[userModel.ts] updateUser ID: ${id}: No changes made to user data.`
+                `[userModel.ts] updateUser ID: ${id}: User found, but no data was changed by the update (data might be identical).`
             );
-            await connection.rollback(); // As per instruction to throw error if 0 rows affected and entity should exist
-            throw new Error(
-                `User with id ${id} found, but no data was changed by the update.`
-            );
+            await connection.rollback(); // No actual update occurred
+            return false;
         }
 
-        const updatedUser = await findUserById(id, connection); // Use the same transaction connection
-        if (!updatedUser) {
-            // This should not happen if affectedRows > 0
-            console.error(
-                `[userModel.ts] updateUser ID: ${id}: Failed to retrieve user after update (within transaction).`
-            );
-            await connection.rollback();
-            throw new Error("Failed to retrieve user after update.");
-        }
+        // No need to fetch the user again if we are just returning a boolean
+        // const updatedUser = await findUserById(id, connection);
+        // if (!updatedUser) {
+        //     console.error(
+        //         `[userModel.ts] updateUser ID: ${id}: Failed to retrieve user after update (within transaction), though affectedRows > 0.`
+        //     );
+        //     await connection.rollback();
+        //     return false;
+        // }
 
         await connection.commit();
-        return updatedUser;
+        return true;
     } catch (error) {
         if (connection) {
-            console.error(
-                `[userModel.ts] updateUser ID: ${id}: Error occurred. Rolling back transaction...`
-            );
+            // console.error already part of the original log
             await connection.rollback();
         }
-        // Avoid re-throwing generic error if a specific one was already thrown
-        if (error instanceof Error && error.message.startsWith("User with id")) {
-            throw error;
-        }
-        if (
-            error instanceof Error &&
-            error.message.startsWith("Failed to retrieve user after update")
-        ) {
-            throw error;
-        }
         console.error(`[userModel.ts] Error in updateUser for ID ${id}:`, error);
-        throw new Error(`Could not complete user update for ID ${id}.`);
+        return false;
     } finally {
         if (connection) {
             connection.release();
@@ -299,10 +287,9 @@ export async function updateUser(
  * Deletes a user from the database by their ID.
  * Uses a transaction to ensure atomicity.
  * @param {number} id - The ID of the user to delete.
- * @returns {Promise<void>} Resolves if deletion is successful.
- * @throws {Error} If the user is not found or deletion fails.
+ * @returns {Promise<boolean>} True if deletion was successful, false otherwise.
  */
-export async function deleteUser(id: number): Promise<void> {
+export async function deleteUser(id: number): Promise<boolean> {
     const sql = "DELETE FROM `User` WHERE `id` = ?";
     let connection: PoolConnection | null = null;
 
@@ -313,26 +300,22 @@ export async function deleteUser(id: number): Promise<void> {
         const [result] = await connection.execute<ResultSetHeader>(sql, [id]);
 
         if (result.affectedRows === 0) {
-            await connection.rollback(); // Rollback before throwing
             console.warn(
-                `[userModel.ts] deleteUser ID: ${id}: User not found for deletion.`
+                `[userModel.ts] deleteUser ID: ${id}: User not found for deletion, or no rows affected.`
             );
-            throw new Error(`User with id ${id} not found for deletion.`);
+            await connection.rollback();
+            return false;
         }
 
         await connection.commit();
+        return true;
     } catch (error) {
         if (connection) {
-            console.error(
-                `[userModel.ts] deleteUser ID: ${id}: Error occurred. Rolling back transaction...`
-            );
+            // console.error already part of the original log
             await connection.rollback();
         }
-        if (error instanceof Error && error.message.startsWith("User with id")) {
-            throw error;
-        }
         console.error(`[userModel.ts] Error in deleteUser for ID ${id}:`, error);
-        throw new Error(`Could not delete user with ID ${id}.`);
+        return false;
     } finally {
         if (connection) {
             connection.release();

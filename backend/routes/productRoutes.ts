@@ -1,47 +1,29 @@
 import express from "express";
-import { vendorChecker } from "../middlewares/vendorChecker";
+import { authMiddleware } from "../middlewares/authMiddleware";
 import * as ProductController from "../controllers/productController";
 import {
     createProductValidator,
     productIdValidator,
     updateProductValidator,
-    // We might need more specific validators or adjust existing ones
-    // e.g., for query params if any, or for published products route.
-    // For now, using existing ones where applicable.
-} from "../libs/productsValidation"; // Assuming this path is correct and validators are suitable
+} from "../libs/productsValidation";
 
-// Multer setup for image uploads
 import multer from "multer";
-const storage = multer.memoryStorage(); // Stores files in memory as Buffer objects
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const productRouter = express.Router();
 
 // GET /products/myproducts - Get all products for stores owned by the authenticated vendor
-productRouter.get(
-    "/myproducts",
-    vendorChecker, // Ensures user is a vendor
-    ProductController.getMyProductsHandler
-);
+productRouter.get("/myproducts", authMiddleware, ProductController.getMyProductsHandler);
 
-// GET /products - Get all published products (public route)
-productRouter.get(
-    "/",
-    ProductController.getAllPublishedProductsHandler
-);
+// GET /products - Get all products (public route)
+// Changed from getAllPublishedProductsHandler to getAllProductsHandler
+productRouter.get("/", ProductController.getAllProductsHandler);
 
-// GET /products/category/:categoryId - Get products by category ID
-// Assuming a route like this might be useful.
-// Needs a validator for categoryId if we add it.
-// For now, this is a placeholder if you want to add it.
-// productRouter.get("/category/:categoryId", ProductController.getProductsByCategoryIdHandler);
-
-
-// POST /products - Create a new product
 productRouter.post(
     "/",
-    vendorChecker,
-    upload.single("image"), // Middleware for handling single image upload from field 'image'
+    authMiddleware, // Authenticate user
+    upload.array("images", 10), // Middleware for handling multiple image uploads from field 'images', max 10
     createProductValidator, // Validates other product fields
     ProductController.createProductHandler
 );
@@ -56,8 +38,8 @@ productRouter.get(
 // PUT /products/:productId - Update a specific product by ID
 productRouter.put(
     "/:productId", // Changed from :id to :productId
-    vendorChecker,
-    upload.single("image"), // For optional image update
+    authMiddleware, // Authenticate user
+    upload.array("images", 10), // For optional multiple image update, max 10
     updateProductValidator, // Validates other fields and :productId
     ProductController.updateProductHandler
 );
@@ -65,7 +47,7 @@ productRouter.put(
 // DELETE /products/:productId - Delete a specific product by ID
 productRouter.delete(
     "/:productId", // Changed from :id to :productId
-    vendorChecker,
+    authMiddleware, // Authenticate user
     productIdValidator, // Validates :productId
     ProductController.deleteProductHandler
 );

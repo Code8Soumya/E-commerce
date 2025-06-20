@@ -5,6 +5,7 @@ import { validationResult } from "express-validator";
 import {
     createUser,
     findUserByEmail,
+    findUserById, // Added findUserById
     updateUser,
     CreateUserInput,
     UpdateUserInput,
@@ -21,7 +22,7 @@ const SALT_ROUNDS = 10;
 
 // Helper function to generate JWT
 const generateToken = (userId: number) => {
-    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "1h" });
+    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "12h" });
 };
 
 export const register = async (req: Request, res: Response) => {
@@ -46,6 +47,14 @@ export const register = async (req: Request, res: Response) => {
 
         const newUserInput: CreateUserInput = { name, email, passwordHash };
         const user = await createUser(newUserInput);
+
+        if (!user) {
+            // createUser now returns null on failure
+            res.status(500).json({
+                message: "User registration failed. Could not create user.",
+            });
+            return;
+        }
 
         const token = generateToken(user.id);
 
@@ -113,12 +122,6 @@ export const getProfile = async (req: Request, res: Response) => {
     res.status(200).json({ message: "Profile fetched successfully", user: req.user });
 };
 
-export const logout = async (req: Request, res: Response) => {
-    // For JWT, logout is primarily client-side (e.g., clearing the token).
-    // No server-side session invalidation is strictly necessary unless implementing a token blacklist.
-    res.status(200).json({ message: "Logout successful. Please clear your token." });
-};
-
 export const updateProfile = async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -132,13 +135,29 @@ export const updateProfile = async (req: Request, res: Response) => {
         return;
     }
     const userId = req.user.id;
-    const { name, email } = req.body; // Assuming these are the fields to update
+    const { name, email, password } = req.body; // Added password
 
     // Construct the update object based on what's provided
     const updates: UpdateUserInput = {};
     if (name !== undefined) updates.name = name;
     if (email !== undefined) updates.email = email;
-    // Note: Password updates should ideally be a separate, more secure endpoint.
+
+    // Handle password update
+    if (password) {
+        if (typeof password === "string" && password.trim().length >= 8) {
+            // Basic validation for password
+            const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+            updates.passwordHash = passwordHash;
+        } else {
+            // It's good practice to validate password length/complexity here or rely on a validation middleware
+            // For now, if password is provided but invalid, we might choose to ignore it or return an error.
+            // Let's return an error if a password is provided but doesn't meet basic criteria.
+            res.status(400).json({
+                message: "Password must be a string and at least 8 characters long.",
+            });
+            return;
+        }
+    }
     // Role updates are not supported by the current userModel.
 
     if (Object.keys(updates).length === 0) {
@@ -158,13 +177,33 @@ export const updateProfile = async (req: Request, res: Response) => {
             }
         }
 
-        const updatedUser = await updateUser(userId, updates);
-        // updatedUser is already UserOutput, so passwordHash is not present
-        res.status(200).json({
-            message: "Profile updated successfully",
-            user: updatedUser, // updatedUser is already UserOutput
-        });
+        const success = await updateUser(userId, updates);
+
+        if (success) {
+            const updatedUserProfile = await findUserById(userId);
+            if (updatedUserProfile) {
+                res.status(200).json({
+                    message: "Profile updated successfully",
+                    user: updatedUserProfile,
+                });
+            } else {
+                // This case is unlikely if updateUser succeeded and user existed,
+                // but handle it defensively.
+                res.status(404).json({
+                    message: "Profile updated, but user not found post-update.",
+                });
+            }
+        } else {
+            // updateUser returned false, indicating failure (e.g., user not found, no change, or DB error)
+            // userModel's updateUser logs specific errors.
+            res.status(500).json({
+                message:
+                    "Failed to update profile. User may not exist or data was unchanged.",
+            });
+        }
     } catch (error) {
+        // This catch block will now primarily handle errors from findUserByEmail (if it were to throw)
+        // or unexpected errors not caught by the model functions' new error handling.
         console.error(`Update profile error for user ${userId}:`, error);
         const errorMessage =
             error instanceof Error ? error.message : "Could not update profile.";

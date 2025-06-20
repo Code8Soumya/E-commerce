@@ -2,6 +2,7 @@ import express, { json, urlencoded, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routes/authRoutes";
+import productRouter from "./routes/productRoutes";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use(urlencoded({ extended: true }));
 
 app.use("/api/auth", authRouter);
+app.use("/api/products", productRouter);
 
 const PORT = Number(process.env.PORT);
 
