@@ -1,164 +1,40 @@
-import express, { Request, Response } from 'express';
-import prisma from '../libs/prisma';
-import { addCartItemValidator, cartItemIdValidator, updateCartItemValidator } from '../libs/cartValidation';
-import { validationResult } from 'express-validator/lib';
-const cartRouter=express.Router();
+import express from "express";
+import {
+    addCartItemValidator,
+    cartItemIdValidator,
+    updateCartItemValidator,
+} from "../libs/cartValidation";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import {
+    getCartHandler,
+    addItemToCartHandler,
+    updateCartItemHandler,
+    removeCartItemHandler,
+    clearCartHandler,
+} from "../controllers/cartController";
 
-// Cart routes
-cartRouter.get('/',async (req:Request, res:Response)=>{
+const cartRouter = express.Router();
 
-    try {
-        const userId = req.user?.id;
-        const cart = await prisma.cart.findUnique({
-        where: { userId },
-        include: {
-            items: {
-            include: {
-                product: true
-             }
-            }
-        }
-    });
+// All cart routes should be protected
+cartRouter.use(authMiddleware);
 
-    if (!cart) {
-       res.status(404).json({ message: 'Cart not found' });
-       return;
-    }
+// --- Cart Level Operations ---
 
-    res.json(cart);
-  } catch (error) {
-    res.status(500).json({ message: 'Something went wrong' });
-  }
-});
+// GET /api/cart - Get the user's cart
+cartRouter.get("/", getCartHandler);
 
-cartRouter.post('/',async (req:Request, res:Response)=>{
-    const userId=req.user?.id;
-        try {
-        const existingCart = await prisma.cart.findUnique({
-        where: { userId }
-        });
+// DELETE /api/cart - Clear all items from the user's cart
+cartRouter.delete("/", clearCartHandler);
 
-        if (existingCart) {
-         res.status(400).json({ message: 'User already has a cart' });
-         return;
-        }
+// --- Cart Item Level Operations ---
 
-        const newCart = await prisma.cart.create({
-            data: {
-                userId:userId||"",
-            }
-            });
+// POST /api/cart/items - Add an item to the cart
+cartRouter.post("/items", addCartItemValidator, addItemToCartHandler);
 
-        res.status(201).json(newCart);
-    } catch (error) {
-        res.status(500).json({ message: 'Something went wrong' });
-    }
-    }
- );
-cartRouter.delete('/', async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    try {
-      await prisma.cart.deleteMany({
-        where: {
-          userId: userId,
-        },
-      });
-      res.status(200).json({ message: 'Cart cleared successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Something went wrong' });
-    }
-});
+// PUT /api/cart/items/:itemId - Update a specific item's quantity in the cart
+cartRouter.put("/items/:itemId", updateCartItemValidator, updateCartItemHandler);
 
-
-
-// Cart item routes
-cartRouter.post('/items',addCartItemValidator, async(req: Request, res: Response) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
-    const userId = req.user?.id;
-    const { productId, quantity } = req.body;
-    try {
-        const cart = await prisma.cart.findUnique({
-        where: { userId },
-        });
-        if (!cart) {
-        res.status(404).json({ message: 'Cart not found' });
-        return;
-        }
-
-      await prisma.cartItem.create({
-        data: {
-            cartId:cart.id,
-            productId: productId,
-            quantity: quantity,
-        },
-      });
-      res.status(201).json({ message: 'Item added to cart successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Something went wrong' });
-    }
-});
-cartRouter.put('/items/:itemId', updateCartItemValidator, 
-async (req: Request, res: Response) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
-    const userId = req.user?.id;
-    const cart=await prisma.cart.findUnique({
-        where:{userId}
-    })
-    if(!cart){
-        res.status(404).json({ message: 'Cart not found' });
-        return;
-    }
-
-    const itemId = req.params.itemId;
-    const { quantity } = req.body;
-    try {
-      await prisma.cartItem.update({
-        where: { id: itemId,
-            cartId:cart.id
-         },
-        data: {
-          quantity: quantity,
-        },
-      });
-      res.status(200).json({ message: 'Item quantity updated successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Something went wrong' });
-    }
-  }
-);
-cartRouter.delete('/items/:itemId', cartItemIdValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
-    const userId = req.user?.id;
-    const cart=await prisma.cart.findUnique({
-        where:{userId}
-    })
-    if(!cart){
-        res.status(404).json({ message: 'Cart not found' });
-        return;
-    }
-    const itemId = req.params.itemId;
-    try {
-      await prisma.cartItem.delete({
-        where: { id: itemId,
-            cartId:cart.id
-         },
-      });
-      res.status(200).json({ message: 'Item removed from cart successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Something went wrong' });
-    }
-});
+// DELETE /api/cart/items/:itemId - Remove a specific item from the cart
+cartRouter.delete("/items/:itemId", cartItemIdValidator, removeCartItemHandler);
 
 export default cartRouter;

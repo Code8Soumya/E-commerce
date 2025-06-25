@@ -24,6 +24,6 @@ authRouter.post("/login", loginValidator, login);
 authRouter.get("/profile", authMiddleware, getProfile);
 
 // PUT /api/auth/profile - Protected (for updating profile)
-authRouter.post("/UpdateProfile", authMiddleware, updateProfileValidator, updateProfile);
+authRouter.put("/UpdateProfile", authMiddleware, updateProfileValidator, updateProfile);
 
 export default authRouter;

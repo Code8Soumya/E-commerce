@@ -34,10 +34,6 @@ CREATE TABLE
         CONSTRAINT `fk_productimage_product` FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
-
-
-    
-
 CREATE TABLE
     `Cart` (
         `id` INT NOT NULL AUTO_INCREMENT,
@@ -59,6 +55,11 @@ CREATE TABLE
         CONSTRAINT `fk_cartitem_cart` FOREIGN KEY (`cartId`) REFERENCES `Cart` (`id`) ON DELETE CASCADE,
         CONSTRAINT `fk_cartitem_product` FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+
+
+
+
+
 
 CREATE TABLE
     `Order` (

@@ -1,0 +1,117 @@
+.profile-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 1rem;
+    background-color: var(--color-background);
+    flex-grow: 1;
+}
+
+.profile-card {
+    background-color: var(--color-panel-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 500px;
+    text-align: left;
+}
+
+.profile-card:hover {
+    transform: translateY(0);
+    box-shadow: var(--shadow-md);
+}
+
+.profile-header {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.profile-details {
+    text-align: left;
+    margin-bottom: 2rem;
+}
+
+.profile-details p {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1.2rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.profile-details p:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.profile-details strong {
+    color: var(--color-text-muted);
+    margin-right: 1rem;
+    font-weight: 500;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+}
+
+.profile-actions .btn {
+    width: 48%;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+}
+
+.form-actions .btn {
+    width: 48%;
+}
+
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+}
+
+.error-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.error-container .profile-card {
+    max-width: 500px;
+    text-align: center;
+}
+
+.error-container p {
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    color: var(--color-error);
+}

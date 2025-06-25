@@ -3,13 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routes/authRoutes";
 import productRouter from "./routes/productRoutes";
+import cartRouter from "./routes/cartRoutes";
 
 dotenv.config();
-
-var corsOptions = {
-    origin: "http://localhost:3000",
-    optionsSuccessStatus: 200,
-};
 
 const app = express();
 app.use(cors());
@@ -19,6 +15,7 @@ app.use(urlencoded({ extended: true }));
 
 app.use("/api/auth", authRouter);
 app.use("/api/products", productRouter);
+app.use("/api/cart", cartRouter);
 
 const PORT = Number(process.env.PORT);
 

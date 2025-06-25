@@ -16,13 +16,18 @@ type Pages = {
   "/products": {
     params: {};
   };
+  "/products/:id": {
+    params: {
+      "id": string;
+    };
+  };
   "/login": {
     params: {};
   };
   "/register": {
     params: {};
   };
-  "/about": {
+  "/profile": {
     params: {};
   };
 };
@@ -30,7 +35,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/products" | "/login" | "/register" | "/about";
+    page: "/" | "/products" | "/products/:id" | "/login" | "/register" | "/profile";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -40,6 +45,10 @@ type RouteFiles = {
     id: "routes/products";
     page: "/products";
   };
+  "routes/products/$id.tsx": {
+    id: "routes/products/$id";
+    page: "/products/:id";
+  };
   "routes/login.tsx": {
     id: "routes/login";
     page: "/login";
@@ -48,8 +57,8 @@ type RouteFiles = {
     id: "routes/register";
     page: "/register";
   };
-  "routes/about.tsx": {
-    id: "routes/about";
-    page: "/about";
+  "routes/profile.tsx": {
+    id: "routes/profile";
+    page: "/profile";
   };
 };
