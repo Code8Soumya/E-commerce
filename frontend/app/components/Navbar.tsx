@@ -1,61 +1,84 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 
-const Navbar = () => {
-    const activeLinkStyle = {
-        color: "var(--color-secondary-light)",
-        textDecoration: "underline",
+const Navbar: React.FC = () => {
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        setIsLoggedIn(!!token);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        setIsLoggedIn(false);
+        navigate("/login");
     };
 
+    const activeLinkClasses = "text-primary font-semibold";
+    const linkClasses = "text-gray-600 hover:text-primary transition-colors duration-300";
+
     return (
-        <nav className="bg-white text-gray-800 p-4 shadow-md border-b border-gray-200 sticky top-0 z-50">
-            <div className="container mx-auto flex justify-between items-center">
-                <NavLink to="/" className="text-2xl font-bold text-primary">
-                    E-commerce
+        <nav className="bg-white shadow-md sticky top-0 z-50">
+            <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                <NavLink to="/" className="text-3xl font-bold text-primary">
+                    e-com
                 </NavLink>
-                <div className="space-x-6">
+                <div className="hidden md:flex items-center space-x-8">
+                    <NavLink
+                        to="/"
+                        className={({ isActive }) =>
+                            isActive ? activeLinkClasses : linkClasses
+                        }
+                    >
+                        Home
+                    </NavLink>
                     <NavLink
                         to="/store"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
+                        className={({ isActive }) =>
+                            isActive ? activeLinkClasses : linkClasses
+                        }
                     >
                         Store
                     </NavLink>
                     <NavLink
                         to="/cart"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
+                        className={({ isActive }) =>
+                            isActive ? activeLinkClasses : linkClasses
+                        }
                     >
                         Cart
                     </NavLink>
                     <NavLink
                         to="/order"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
+                        className={({ isActive }) =>
+                            isActive ? activeLinkClasses : linkClasses
+                        }
                     >
                         Order
                     </NavLink>
-                    <NavLink
-                        to="/login"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
-                    >
-                        Login
-                    </NavLink>
-                    <NavLink
-                        to="/register"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
-                    >
-                        Register
-                    </NavLink>
-                    <NavLink
-                        to="/profile"
-                        className="transition duration-300 hover:text-secondary"
-                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
-                    >
-                        Profile
-                    </NavLink>
+                </div>
+                <div className="flex items-center space-x-4">
+                    {isLoggedIn ? (
+                        <>
+<NavLink to="/profile" className={({ isActive }) => (isActive ? activeLinkClasses : linkClasses)}>
+    Profile
+</NavLink>
+                            <button onClick={handleLogout} className="btn btn-secondary">
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <NavLink to="/login" className="btn btn-outline">
+                                Login
+                            </NavLink>
+                            <NavLink to="/register" className="btn btn-primary">
+                                Register
+                            </NavLink>
+                        </>
+                    )}
                 </div>
             </div>
         </nav>

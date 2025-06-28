@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getProductById } from "../lib/api";
 import type { Product } from "../lib/types";
+import ReactMarkdown from "react-markdown";
 
 const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -103,13 +104,13 @@ const ProductDetails: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="pt-8">
+                    <div className="pt-8 prose">
                         <h1 className="text-5xl font-bold text-gray-900 mb-4">
-                            {product.title}
+                            <ReactMarkdown>{product.title}</ReactMarkdown>
                         </h1>
-                        <p className="text-gray-500 text-lg mb-6">
-                            {product.description}
-                        </p>
+                        <div className="text-gray-500 text-lg mb-6">
+                            <ReactMarkdown>{product.description}</ReactMarkdown>
+                        </div>
                         <div className="flex items-center mb-6">
                             <p className="text-4xl font-bold text-primary mr-4">
                                 ${product.price}

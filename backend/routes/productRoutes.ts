@@ -1,6 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import * as ProductController from "../controllers/productController";
+import * as AIController from "../controllers/aiController";
 import {
     createProductValidator,
     productIdValidator,
@@ -17,39 +18,55 @@ const productRouter = express.Router();
 productRouter.get("/myproducts", authMiddleware, ProductController.getMyProductsHandler);
 
 // GET /products - Get all products (public route)
-// Changed from getAllPublishedProductsHandler to getAllProductsHandler
 productRouter.get("/", ProductController.getAllProductsHandler);
 
+// POST /products - Create a new product
 productRouter.post(
     "/",
-    authMiddleware, // Authenticate user
-    upload.array("images", 10), // Middleware for handling multiple image uploads from field 'images', max 10
-    createProductValidator, // Validates other product fields
+    authMiddleware,
+    upload.array("images", 10),
+    createProductValidator,
     ProductController.createProductHandler
 );
 
 // GET /products/:productId - Get a specific product by ID
 productRouter.get(
-    "/:productId", // Changed from :id to :productId to match controller
-    productIdValidator, // Validates :productId
+    "/:productId",
+    productIdValidator,
     ProductController.getProductByIdHandler
 );
 
 // PUT /products/:productId - Update a specific product by ID
 productRouter.put(
-    "/:productId", // Changed from :id to :productId
-    authMiddleware, // Authenticate user
-    upload.array("images", 10), // For optional multiple image update, max 10
-    updateProductValidator, // Validates other fields and :productId
+    "/:productId",
+    authMiddleware,
+    upload.array("images", 10),
+    updateProductValidator,
     ProductController.updateProductHandler
 );
 
 // DELETE /products/:productId - Delete a specific product by ID
 productRouter.delete(
-    "/:productId", // Changed from :id to :productId
-    authMiddleware, // Authenticate user
-    productIdValidator, // Validates :productId
+    "/:productId",
+    authMiddleware,
+    productIdValidator,
     ProductController.deleteProductHandler
+);
+
+// POST /products/generate-title - Generate a title based on images
+productRouter.post(
+    "/generate-title",
+    authMiddleware,
+    upload.array("images", 10),
+    AIController.generateTitleHandler
+);
+
+// POST /products/generate-description - Generate a description based on images
+productRouter.post(
+    "/generate-description",
+    authMiddleware,
+    upload.array("images", 10),
+    AIController.generateDescriptionHandler
 );
 
 export default productRouter;

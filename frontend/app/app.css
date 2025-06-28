@@ -123,6 +123,42 @@ h6 {
   color: white;
 }
 
+.btn-ai {
+  background: linear-gradient(45deg, var(--color-primary), var(--color-secondary));
+  color: white;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-ai:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Delete button styles */
+.btn-error {
+  background-color: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+  border-width: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.btn-error:hover {
+  background-color: #B91C1C;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* Cards & Panels */
 .card {
   background-color: var(--color-panel-bg);
