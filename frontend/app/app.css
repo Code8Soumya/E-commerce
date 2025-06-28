@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+/* 
+=================================================================
+🎨 COLOR & FONT DEFINITIONS
+- Uses CSS variables for a consistent and maintainable theme.
+- Palette is based on the "Friendly & Youthful (Vibrant)" scheme.
+=================================================================
+*/
+:root {
+  /* Core Palette */
+  --color-primary: #8B5CF6;
+  --color-secondary: #0EA5E9;
+  --color-background: #F9FAFB;
+  /* Using Gray 50 for a softer background */
+  --color-text: #1F2937;
+  --color-success: #22C55E;
+  --color-error: #DC2626;
+  --color-warning: #EAB308;
+
+  /* Variants & Shades */
+  --color-primary-light: #C084FC;
+  --color-primary-dark: #6B21A8;
+  --color-secondary-light: #38BDF8;
+  --color-secondary-dark: #0284C7;
+
+  /* Neutral Gray Scale */
+  --color-text-muted: #6B7280;
+  /* Gray 500 */
+  --color-border: #E5E7EB;
+  /* Gray 200 */
+  --color-input-border: #D1D5DB;
+  /* Gray 300 */
+  --color-panel-bg: #FFFFFF;
+
+  /* UI Elements */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px 0 rgba(139, 92, 246, 0.10), 0 1.5px 4px 0 rgba(0, 0, 0, 0.04);
+  --border-radius: 0.5rem;
+  --transition-speed: 0.2s;
+}
+
+/* 
+=================================================================
+🖌️ GLOBAL & BASE STYLES
+- Sets base styles for typography, layout, and links.
+=================================================================
+*/
+html,
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: color var(--transition-speed);
+}
+
+a:hover {
+  color: var(--color-secondary-dark);
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* 
+=================================================================
+🛠 COMPONENT STYLES
+- Reusable classes for common UI components like buttons,
+  cards, forms, and alerts.
+=================================================================
+*/
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color var(--transition-speed), transform var(--transition-speed);
+  border: 1px solid transparent;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary-dark);
+  border-color: var(--color-secondary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-secondary);
+  color: white;
+}
+
+.btn-ai {
+  background: linear-gradient(45deg, var(--color-primary), var(--color-secondary));
+  color: white;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-ai:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Delete button styles */
+.btn-error {
+  background-color: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+  border-width: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.btn-error:hover {
+  background-color: #B91C1C;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Cards & Panels */
+.card {
+  background-color: var(--color-panel-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-speed);
+  padding: 1.5rem;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Forms */
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--border-radius);
+  background-color: var(--color-panel-bg);
+  color: var(--color-text);
+  transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* Alerts */
+.alert {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid;
+}
+
+.alert-success {
+  background-color: #F0FDF4;
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.alert-error {
+  background-color: #FEF2F2;
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.alert-warning {
+  background-color: #FFFBEB;
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+
+/* 
+=================================================================
+🦶 FOOTER STYLES
+- A clean, minimal footer design.
+=================================================================
+*/
+.footer {
+  background-color: var(--color-panel-bg);
+  border-top: 1px solid var(--color-border);
+  padding: 2rem 1rem;
+  text-align: center;
+  margin-top: 4rem;
+}
+
+.footer-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.footer-social {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer-social a {
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  transition: color var(--transition-speed);
+}
+
+.footer-social a:hover {
+  color: var(--color-primary);
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer-copyright {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.product-card-image::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+  transition: background-color 0.3s ease;
+}
+
+.group:hover .product-card-image::after {
+  background-color: rgba(0, 0, 0, 0.5);
+}

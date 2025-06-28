@@ -10,45 +10,28 @@ CREATE TABLE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
 CREATE TABLE
-    `Store` (
-        `id` INT NOT NULL AUTO_INCREMENT,
-        `ownerId` INT NOT NULL,
-        `name` VARCHAR(200) NOT NULL,
-        `description` TEXT,
-        `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `stripeAccountId` VARCHAR(200),
-        PRIMARY KEY (`id`),
-        KEY `idx_store_owner` (`ownerId`),
-        CONSTRAINT `fk_store_owner` FOREIGN KEY (`ownerId`) REFERENCES `User` (`id`) ON DELETE CASCADE
-    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
-
-CREATE TABLE
     `Product` (
         `id` INT NOT NULL AUTO_INCREMENT,
-        `storeId` INT NOT NULL,
-        `categoryId` INT DEFAULT NULL,
-        `title` VARCHAR(191) NOT NULL,
+        `title` VARCHAR(1000) NOT NULL,
         `description` TEXT,
         `price` DOUBLE NOT NULL,
         `stock` INT NOT NULL,
-        `image` LONGBLOB NOT NULL,
+        `ownerId` INT NOT NULL,
         `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (`id`),
-        KEY `idx_product_store` (`storeId`),
-        KEY `idx_product_category` (`categoryId`),
-        CONSTRAINT `fk_product_store` FOREIGN KEY (`storeId`) REFERENCES `Store` (`id`) ON DELETE CASCADE,
-        CONSTRAINT `fk_product_category` FOREIGN KEY (`categoryId`) REFERENCES `Category` (`id`) ON DELETE SET NULL
+        KEY `idx_product_owner` (`ownerId`),
+        CONSTRAINT `fk_product_owner` FOREIGN KEY (`ownerId`) REFERENCES `User` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
 CREATE TABLE
-    `Category` (
+    `ProductImage` (
         `id` INT NOT NULL AUTO_INCREMENT,
-        `name` VARCHAR(200) NOT NULL,
-        `parentId` INT DEFAULT NULL,
+        `productId` INT NOT NULL,
+        `imageData` LONGBLOB NOT NULL,
+        `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (`id`),
-        UNIQUE KEY `idx_category_name` (`name`),
-        KEY `idx_category_parent` (`parentId`),
-        CONSTRAINT `fk_category_parent` FOREIGN KEY (`parentId`) REFERENCES `Category` (`id`) ON DELETE SET NULL
+        KEY `idx_productimage_product` (`productId`),
+        CONSTRAINT `fk_productimage_product` FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
 CREATE TABLE
@@ -72,6 +55,11 @@ CREATE TABLE
         CONSTRAINT `fk_cartitem_cart` FOREIGN KEY (`cartId`) REFERENCES `Cart` (`id`) ON DELETE CASCADE,
         CONSTRAINT `fk_cartitem_product` FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+
+
+
+
+
 
 CREATE TABLE
     `Order` (
