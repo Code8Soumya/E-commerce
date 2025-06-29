@@ -22,13 +22,15 @@ export const createProductValidator = [
         .notEmpty()
         .withMessage("Price is required")
         .isFloat({ gt: 0 })
-        .withMessage("Price must be a number greater than 0"),
+        .withMessage("Price must be a number greater than 0")
+        .isDecimal({ decimal_digits: "2" })
+        .withMessage("Price must have exactly two digits after the decimal"),
 
     body("stock")
         .notEmpty()
         .withMessage("Stock is required")
-        .isInt({ min: 0 })
-        .withMessage("Stock must be a non-negative integer"),
+        .isInt({ min: 1, max: 10000 })
+        .withMessage("Stock must be an integer between 1 and 10000"),
 ];
 
 export const productIdValidator = [
@@ -69,10 +71,12 @@ export const updateProductValidator = [
     body("price")
         .optional()
         .isFloat({ gt: 0 })
-        .withMessage("Price must be a number greater than 0 if provided"),
+        .withMessage("Price must be a number greater than 0 if provided")
+        .isDecimal({ decimal_digits: "2" })
+        .withMessage("Price must have exactly two digits after the decimal"),
 
     body("stock")
         .optional()
-        .isInt({ min: 0 })
-        .withMessage("Stock must be a non-negative integer if provided"),
+        .isInt({ min: 1, max: 10000 })
+        .withMessage("Stock must be an integer between 1 and 10000"),
 ];

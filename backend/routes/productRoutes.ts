@@ -2,11 +2,13 @@ import express from "express";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import * as ProductController from "../controllers/productController";
 import * as AIController from "../controllers/aiController";
+import * as SearchController from "../controllers/searchController";
 import {
     createProductValidator,
     productIdValidator,
     updateProductValidator,
 } from "../libs/productsValidation";
+import { searchValidator } from "../libs/searchValidation";
 
 import multer from "multer";
 const storage = multer.memoryStorage();
@@ -19,6 +21,9 @@ productRouter.get("/myproducts", authMiddleware, ProductController.getMyProducts
 
 // GET /products - Get all products (public route)
 productRouter.get("/", ProductController.getAllProductsHandler);
+
+// POST /products/search - Search products using vector search
+productRouter.post("/search", searchValidator, SearchController.searchProductsHandler);
 
 // POST /products - Create a new product
 productRouter.post(

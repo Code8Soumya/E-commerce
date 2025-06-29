@@ -143,6 +143,11 @@ h6 {
   box-shadow: none;
 }
 
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+}
+
 /* Delete button styles */
 .btn-error {
   background-color: var(--color-error);
@@ -157,6 +162,23 @@ h6 {
   background-color: #B91C1C;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border-color: var(--color-input-border);
+}
+
+/* Product Details Link - Remove underline on hover */
+.product-details-link:hover {
+  text-decoration: none !important;
 }
 
 /* Cards & Panels */
@@ -263,19 +285,4 @@ h6 {
 .footer-copyright {
   color: var(--color-text-muted);
   font-size: 0.9rem;
-}
-
-.product-card-image::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.25);
-  transition: background-color 0.3s ease;
-}
-
-.group:hover .product-card-image::after {
-  background-color: rgba(0, 0, 0, 0.5);
 }

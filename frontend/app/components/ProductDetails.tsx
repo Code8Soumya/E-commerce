@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import * as api from "../lib/api";
 import { getProductById } from "../lib/api";
 import type { Product } from "../lib/types";
 import ReactMarkdown from "react-markdown";
 
 const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+    const handleAddToCart = async () => {
+        if (!product) return;
+        try {
+            await api.addItemToCart(product.id, 1);
+            navigate("/cart");
+        } catch (error) {
+            console.error("Failed to add item to cart", error);
+            setError("Failed to add item to cart. Please try again.");
+        }
+    };
 
     const arrayBufferToBase64 = (buffer: number[]) => {
         if (!buffer || !Array.isArray(buffer)) {
@@ -62,28 +75,29 @@ const ProductDetails: React.FC = () => {
     }
 
     return (
-        <div className="bg-white">
-            <div className="container mx-auto px-4 py-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
-                    <div>
-                        <div className="bg-gray-100 rounded-lg shadow-md flex items-center justify-center h-96 mb-4">
+        <div className="bg-gray-50">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                    {/* Image Gallery */}
+                    <div className="space-y-4">
+                        <div className="bg-white rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
                             <img
                                 src={selectedImage || "https://via.placeholder.com/600"}
                                 alt={product.title}
-                                className="max-h-full max-w-full object-contain"
+                                className="w-full h-[450px] object-contain"
                             />
                         </div>
-                        <div className="flex space-x-4">
+                        <div className="grid grid-cols-5 gap-3">
                             {product.images.map((image) => (
-                                <div
+                                <button
                                     key={image.id}
-                                    className={`w-24 h-24 flex items-center justify-center rounded-lg cursor-pointer border-2 transition-all duration-200 ${
+                                    className={`block rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                                         selectedImage ===
                                         `data:image/jpeg;base64,${arrayBufferToBase64(
                                             image.imageData.data
                                         )}`
-                                            ? "border-primary shadow-lg"
-                                            : "border-gray-200 hover:border-primary hover:shadow-md"
+                                            ? "border-primary ring-2 ring-primary"
+                                            : "border-gray-200 hover:border-primary"
                                     }`}
                                     onClick={() =>
                                         setSelectedImage(
@@ -97,33 +111,40 @@ const ProductDetails: React.FC = () => {
                                         src={`data:image/jpeg;base64,${arrayBufferToBase64(
                                             image.imageData.data
                                         )}`}
-                                        alt={product.title}
-                                        className="max-h-full max-w-full object-contain"
+                                        alt={`${product.title} thumbnail`}
+                                        className="w-full h-24 object-cover"
                                     />
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>
-                    <div className="pt-8 prose">
-                        <h1 className="text-5xl font-bold text-gray-900 mb-4">
+
+                    {/* Product Information */}
+                    <div className="bg-white rounded-lg shadow-lg p-8">
+                        <h1 className="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
                             <ReactMarkdown>{product.title}</ReactMarkdown>
                         </h1>
-                        <div className="text-gray-500 text-lg mb-6">
+                        <div className="prose prose-lg text-gray-600 mb-6 max-w-none">
                             <ReactMarkdown>{product.description}</ReactMarkdown>
                         </div>
-                        <div className="flex items-center mb-6">
-                            <p className="text-4xl font-bold text-primary mr-4">
-                                ${product.price}
-                            </p>
-                            <p className="text-gray-500">
-                                <span className="font-semibold">Stock:</span>{" "}
-                                {product.stock}
-                            </p>
+                        
+                        <div className="flex items-baseline mb-6">
+                            <span className="text-5xl font-bold text-primary mr-3">
+                                ${product.price.toFixed(2)}
+                            </span>
+                            <span className="text-lg text-gray-500">
+                                ({product.stock} in stock)
+                            </span>
                         </div>
-                        <hr className="my-8" />
-                        <button className="btn btn-primary btn-lg w-full">
-                            Add to Cart
-                        </button>
+
+                        <div className="mt-8">
+                            <button
+                                onClick={handleAddToCart}
+                                className="btn btn-primary btn-lg w-full text-lg"
+                            >
+                                Add to Cart
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

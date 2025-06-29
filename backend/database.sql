@@ -55,26 +55,3 @@ CREATE TABLE
         CONSTRAINT `fk_cartitem_cart` FOREIGN KEY (`cartId`) REFERENCES `Cart` (`id`) ON DELETE CASCADE,
         CONSTRAINT `fk_cartitem_product` FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON DELETE CASCADE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
-
-
-
-
-
-
-CREATE TABLE
-    `Order` (
-        `id` INT NOT NULL AUTO_INCREMENT,
-        `userId` INT NOT NULL,
-        `totalAmount` DOUBLE NOT NULL,
-        `status` ENUM ('pending', 'paid', 'shipped') NOT NULL DEFAULT 'pending',
-        `shippingAddressId` INT NOT NULL,
-        `billingAddressId` INT NOT NULL,
-        `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`),
-        KEY `idx_order_user` (`userId`),
-        KEY `idx_order_ship_addr` (`shippingAddressId`),
-        KEY `idx_order_bill_addr` (`billingAddressId`),
-        CONSTRAINT `fk_order_user` FOREIGN KEY (`userId`) REFERENCES `User` (`id`) ON DELETE CASCADE,
-        CONSTRAINT `fk_order_ship_addr` FOREIGN KEY (`shippingAddressId`) REFERENCES `Address` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `fk_order_bill_addr` FOREIGN KEY (`billingAddressId`) REFERENCES `Address` (`id`) ON DELETE RESTRICT
-    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;

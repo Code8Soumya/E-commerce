@@ -19,10 +19,9 @@ export async function getCartHandler(
     }
 
     try {
-        const cart = await CartModel.getCartWithItemsByUserId(userId);
+        const cart = await CartModel.getCartWithItemDetailsByUserId(userId);
         if (!cart) {
-            // If no cart, we can either return 404 or an empty cart structure
-            // Depending on frontend expectations. Let's create one.
+            // If no cart, create one and return it (it will be empty).
             const newCart = await CartModel.getOrCreateCartWithItems(userId);
             res.status(200).json(newCart);
             return;
@@ -68,9 +67,19 @@ export async function addItemToCartHandler(
             return;
         }
 
-        const cart = await CartModel.getOrCreateCartWithItems(userId);
-        const addedItem = await CartModel.addItemToCart(cart.id, productId, quantity);
-        res.status(201).json(addedItem);
+        // The model function handles both adding and updating quantity.
+        await CartModel.addItemToCart(
+            (
+                await CartModel.getOrCreateCartWithItems(userId)
+            ).id,
+            productId,
+            quantity
+        );
+
+        // After adding, fetch the entire updated cart to send back to the client.
+        // This ensures the frontend has the most current state.
+        const updatedCart = await CartModel.getCartWithItemDetailsByUserId(userId);
+        res.status(200).json(updatedCart);
     } catch (error) {
         console.error("[cartController.ts] Error in addItemToCartHandler:", error);
         res.status(500).json({ message: "Failed to add item to cart." });
@@ -131,11 +140,13 @@ export async function updateCartItemHandler(
 
         if (quantity <= 0) {
             await CartModel.deleteCartItem(cartItemId);
-            res.status(200).json({ message: "Item removed from cart." });
         } else {
-            const updatedItem = await CartModel.updateCartItem(cartItemId, { quantity });
-            res.status(200).json(updatedItem);
+            await CartModel.updateCartItem(cartItemId, { quantity });
         }
+
+        // Return the full, updated cart
+        const updatedCart = await CartModel.getCartWithItemDetailsByUserId(userId);
+        res.status(200).json(updatedCart);
     } catch (error) {
         console.error("[cartController.ts] Error in updateCartItemHandler:", error);
         res.status(500).json({ message: "Failed to update cart item." });
@@ -177,7 +188,10 @@ export async function removeCartItemHandler(
         }
 
         await CartModel.deleteCartItem(cartItemId);
-        res.status(200).json({ message: "Item removed from cart successfully." });
+
+        // Return the full, updated cart
+        const updatedCart = await CartModel.getCartWithItemDetailsByUserId(userId);
+        res.status(200).json(updatedCart);
     } catch (error) {
         console.error("[cartController.ts] Error in removeCartItemHandler:", error);
         res.status(500).json({ message: "Failed to remove item from cart." });
@@ -199,8 +213,9 @@ export async function clearCartHandler(
         if (cart) {
             await CartModel.clearCart(cart.id);
         }
-        // If no cart, it's already "clear", so we don't need to error.
-        res.status(200).json({ message: "Cart cleared successfully." });
+        // Return the full, updated (and now empty) cart
+        const updatedCart = await CartModel.getCartWithItemDetailsByUserId(userId);
+        res.status(200).json(updatedCart);
     } catch (error) {
         console.error("[cartController.ts] Error in clearCartHandler:", error);
         res.status(500).json({ message: "Failed to clear cart." });

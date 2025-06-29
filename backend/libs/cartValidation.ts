@@ -16,7 +16,7 @@ export const addCartItemValidator = [
         .isInt({ min: 1 })
         .withMessage("Quantity must be at least 1")
         .isInt({ max: 200 })
-        .withMessage("Quantity cannot exceed 100")
+        .withMessage("Quantity cannot exceed 200")
         .toInt(),
 ];
 
@@ -33,8 +33,8 @@ export const updateCartItemValidator = [
         .trim()
         .notEmpty()
         .withMessage("Quantity is required")
-        .isInt({ min: 1 })
-        .withMessage("Quantity must be at least 1")
+        .isInt({ min: 0 })
+        .withMessage("Quantity must be a non-negative integer")
         .toInt(),
 ];
 

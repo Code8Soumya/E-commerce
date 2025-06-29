@@ -1,6 +1,7 @@
 import pool from "../config/db";
 import { RowDataPacket, ResultSetHeader, PoolConnection } from "mysql2/promise";
-
+import * as ProductModel from "./productModel";
+import { Product, ProductWithImages } from "./productModel";
 // #region Cart Entity
 // ======================================================================================
 // Cart Interfaces & Types
@@ -20,12 +21,6 @@ export interface Cart {
 export interface CreateCartInput {
     userId: number;
 }
-
-/**
- * Input for updating an existing Cart.
- * Only 'userId' can be updated, though this is generally not a common operation for a cart.
- */
-export type UpdateCartInput = Partial<Pick<Cart, "userId">>;
 
 // ======================================================================================
 // Cart Helper Function
@@ -149,75 +144,15 @@ export const findCartByUserId = async (
 };
 
 /**
- * Updates an existing cart.
- * @param {number} id - The ID of the cart to update.
- * @param {UpdateCartInput} updates - The updates to apply.
- * @returns {Promise<Cart>} The updated cart.
- * @throws {Error} If the cart could not be updated or not found.
- */
-export const updateCart = async (id: number, updates: UpdateCartInput): Promise<Cart> => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const validUpdateFields = Object.keys(updates).filter(
-            (key) => updates[key as keyof UpdateCartInput] !== undefined
-        );
-        if (validUpdateFields.length === 0) {
-            const currentCart = await findCartById(id, connection);
-            if (!currentCart) throw new Error(`Cart with ID ${id} not found.`);
-            await connection.commit(); // Commit as no update was made but cart exists
-            return currentCart;
-        }
-
-        const setClauses = validUpdateFields
-            .map((field) => `\`${field}\` = ?`)
-            .join(", ");
-        const values = validUpdateFields.map(
-            (field) => updates[field as keyof UpdateCartInput]
-        );
-
-        const [result] = await connection.execute<ResultSetHeader>(
-            `UPDATE \`Cart\` SET ${setClauses} WHERE id = ?`,
-            [...values, id]
-        );
-
-        if (result.affectedRows === 0) {
-            // Check if cart exists, if not, it's a "not found" error.
-            // If it exists but no rows affected, it means data was same.
-            const existingCart = await findCartById(id, connection);
-            if (!existingCart) {
-                throw new Error(`Cart with ID ${id} not found for update.`);
-            }
-        }
-
-        const updatedCart = await findCartById(id, connection);
-        if (!updatedCart) {
-            throw new Error("Failed to retrieve cart after update.");
-        }
-        await connection.commit();
-        return updatedCart;
-    } catch (error) {
-        await connection.rollback();
-        console.error(
-            `[cartModel.ts] updateCart: Error updating cart with id ${id}.`,
-            error
-        );
-        throw new Error("Could not update cart.");
-    } finally {
-        connection.release();
-    }
-};
-
-/**
  * Deletes a cart by its ID.
  * @param {number} id - The ID of the cart to delete.
  * @returns {Promise<void>}
  * @throws {Error} If the cart could not be deleted or not found.
  */
 export const deleteCart = async (id: number): Promise<void> => {
-    const connection = await pool.getConnection();
+    let connection;
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
         // Related cart items are deleted by CASCADE constraint
         const [result] = await connection.execute<ResultSetHeader>(
@@ -230,14 +165,14 @@ export const deleteCart = async (id: number): Promise<void> => {
         }
         await connection.commit();
     } catch (error) {
-        await connection.rollback();
+        if (connection) await connection.rollback();
         console.error(
             `[cartModel.ts] deleteCart: Error deleting cart with id ${id}.`,
             error
         );
         throw new Error("Could not delete cart.");
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 };
 
@@ -256,6 +191,10 @@ export interface CartItem {
     cartId: number;
     productId: number;
     quantity: number;
+}
+
+export interface CartItemWithProduct extends CartItem {
+    product: ProductWithImages;
 }
 
 /**
@@ -567,7 +506,7 @@ export const deleteCartItemsByCartId = async (
 // ======================================================================================
 
 export interface CartWithItems extends Cart {
-    items: CartItem[];
+    items: CartItemWithProduct[];
 }
 
 // ======================================================================================
@@ -575,33 +514,80 @@ export interface CartWithItems extends Cart {
 // ======================================================================================
 
 /**
- * Retrieves a cart along with its items for a given user ID.
+ * Retrieves a cart along with its items (including product details) for a given user ID.
  * @param {number} userId - The ID of the user.
  * @param {PoolConnection} [internalConnection] - Optional connection for transactions.
- * @returns {Promise<CartWithItems | null>} The cart with items, or null if no cart exists for the user.
+ * @returns {Promise<CartWithItems | null>} The cart with detailed items, or null if no cart exists.
  * @throws {Error} If an error occurs during fetching.
  */
-export const getCartWithItemsByUserId = async (
+export const getCartWithItemDetailsByUserId = async (
     userId: number,
     internalConnection?: PoolConnection
 ): Promise<CartWithItems | null> => {
     const connection = internalConnection || (await pool.getConnection());
     try {
-        // No transaction needed for reads unless part of a larger operation passed via internalConnection
         const cart = await findCartByUserId(userId, connection);
         if (!cart) {
-            return null;
+            return null; // No cart found for the user.
         }
-        const items = await findCartItemsByCartId(cart.id, connection);
-        return { ...cart, items };
+
+        // 1. Fetch all cart items for the given cart.
+        const cartItems = await findCartItemsByCartId(cart.id, connection);
+        if (cartItems.length === 0) {
+            return { ...cart, items: [] }; // Cart exists but is empty.
+        }
+
+        // 2. For each cart item, fetch the full product details including images.
+        // This creates an array of promises.
+        const itemDetailPromises = cartItems.map(async (item) => {
+            // Using findProductById which correctly fetches product with images.
+            const productWithImages = await ProductModel.findProductById(
+                item.productId,
+                connection
+            );
+
+            if (!productWithImages) {
+                // This case indicates a data integrity issue (a cart item points to a non-existent product).
+                // We'll log an error and filter out this item from the final cart.
+                console.error(
+                    `[cartModel.ts] Data integrity issue: Product with ID ${item.productId} not found for CartItem ID ${item.id}.`
+                );
+                return null;
+            }
+
+            // Combine the cart item info with the detailed product info.
+            return {
+                ...item,
+                product: productWithImages,
+            };
+        });
+
+        // 3. Wait for all the product details to be fetched.
+        const resolvedItems = await Promise.all(itemDetailPromises);
+
+        // 4. Filter out any null results from failed product lookups.
+        const itemsWithDetails = resolvedItems.filter(
+            (item): item is CartItemWithProduct => item !== null
+        );
+
+        return { ...cart, items: itemsWithDetails };
     } catch (error) {
         console.error(
-            `[cartModel.ts] getCartWithItemsByUserId: Error for user ${userId}.`,
+            `[cartModel.ts] getCartWithItemDetailsByUserId: Error for user ${userId}.`,
             error
         );
-        throw new Error("Could not retrieve cart with items.");
+        // Check if the error is a known type, otherwise throw a generic message.
+        if (error instanceof Error) {
+            throw new Error(
+                `Could not retrieve cart with item details: ${error.message}`
+            );
+        }
+        throw new Error("Could not retrieve cart with item details due to an unknown error.");
     } finally {
-        if (!internalConnection) connection.release();
+        // Only release the connection if it was created within this function.
+        if (!internalConnection) {
+            connection.release();
+        }
     }
 };
 
@@ -619,15 +605,19 @@ export const getOrCreateCartWithItems = async (
     try {
         await connection.beginTransaction();
 
-        let cart = await findCartByUserId(userId, connection);
-        if (!cart) {
-            cart = await createCart({ userId }, connection);
+        const cartWithDetails = await getCartWithItemDetailsByUserId(userId, connection);
+
+        if (cartWithDetails) {
+            await connection.commit(); // Commit if we found a cart, even if empty.
+            return cartWithDetails;
         }
 
-        const items = await findCartItemsByCartId(cart.id, connection);
+        // If no cart exists, create one.
+        const newCart = await createCart({ userId }, connection);
 
         await connection.commit();
-        return { ...cart, items };
+        // Return the new, empty cart structure.
+        return { ...newCart, items: [] };
     } catch (error) {
         await connection.rollback();
         console.error(

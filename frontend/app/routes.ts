@@ -8,4 +8,6 @@ export default [
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
     route("/profile", "routes/profile.tsx"),
+    route("/orders", "routes/orders.tsx"),
+    route("/cart", "routes/cart.tsx"),
 ] satisfies RouteConfig;

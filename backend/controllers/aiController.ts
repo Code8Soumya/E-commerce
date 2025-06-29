@@ -13,7 +13,7 @@ const config = {
     responseMimeType: "text/plain",
 };
 
-const model = "gemini-2.5-pro";
+const model = "gemini-2.5-flash";
 
 // Handler to generate product title from images
 export async function generateTitleHandler(req: Request, res: Response): Promise<void> {

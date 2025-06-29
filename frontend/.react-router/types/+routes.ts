@@ -33,12 +33,18 @@ type Pages = {
   "/profile": {
     params: {};
   };
+  "/orders": {
+    params: {};
+  };
+  "/cart": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/store" | "/products" | "/products/:id" | "/login" | "/register" | "/profile";
+    page: "/" | "/store" | "/products" | "/products/:id" | "/login" | "/register" | "/profile" | "/orders" | "/cart";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -67,5 +73,13 @@ type RouteFiles = {
   "routes/profile.tsx": {
     id: "routes/profile";
     page: "/profile";
+  };
+  "routes/orders.tsx": {
+    id: "routes/orders";
+    page: "/orders";
+  };
+  "routes/cart.tsx": {
+    id: "routes/cart";
+    page: "/cart";
   };
 };

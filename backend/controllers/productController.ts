@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import * as ProductModel from "../models/productModel";
 import { validationResult } from "express-validator";
 import { UserOutput } from "../models/userModel"; // For req.user type
+import {
+    upsertProductToPinecone,
+    deleteProductFromPinecone,
+} from "../utils/pineconeService";
 
 // Extend Express Request type to include 'user' and 'files'
 // Make 'files' compatible with the general Express.Request.files type
@@ -59,6 +63,18 @@ export async function createProductHandler(
             imagesData, // Use the array of buffers
         };
         const newProduct = await ProductModel.createProduct(productData);
+
+        // Add product to Pinecone vector database
+        try {
+            await upsertProductToPinecone(
+                newProduct.id.toString(),
+                `${newProduct.title} ${newProduct.description || ''}` // Pass combined title and description as the 'description' argument
+            );
+        } catch (pineconeError) {
+            console.error("[productController.ts] Error adding product to Pinecone:", pineconeError);
+            // Don't fail the request if Pinecone fails, just log the error
+        }
+
         res.status(201).json(newProduct);
     } catch (error) {
         console.error("[productController.ts] Error in createProductHandler:", error);
@@ -206,6 +222,18 @@ export async function updateProductHandler(
             ownerId,
             updates
         );
+
+        // Update product in Pinecone vector database
+        try {
+            await upsertProductToPinecone(
+                updatedProduct.id.toString(),
+                `${updatedProduct.title} ${updatedProduct.description || ''}` // Pass combined title and description as the 'description' argument
+            );
+        } catch (pineconeError) {
+            console.error("[productController.ts] Error updating product in Pinecone:", pineconeError);
+            // Don't fail the request if Pinecone fails, just log the error
+        }
+
         res.status(200).json(updatedProduct);
     } catch (error) {
         console.error(
@@ -256,6 +284,18 @@ export async function deleteProductHandler(
 
     try {
         await ProductModel.deleteProduct(productId, ownerId);
+
+        // Delete product from Pinecone vector database
+        try {
+            await deleteProductFromPinecone(productId.toString()); // Pinecone ID is string
+        } catch (pineconeError) {
+            console.error(
+                "[productController.ts] Error deleting product from Pinecone:",
+                pineconeError
+            );
+            // Don't fail the request if Pinecone fails, just log the error
+        }
+
         res.status(200).json({
             message: `Product with ID ${productId} deleted successfully.`,
         });

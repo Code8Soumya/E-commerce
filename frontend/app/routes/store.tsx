@@ -22,6 +22,11 @@ interface FormState {
     images: File[];
 }
 
+interface FormErrors {
+    price?: string;
+    stock?: string;
+}
+
 const StorePage: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -34,6 +39,7 @@ const StorePage: React.FC = () => {
         stock: "",
         images: [],
     });
+    const [formErrors, setFormErrors] = useState<FormErrors>({});
     const [editing, setEditing] = useState<Product | null>(null);
     const [popup, setPopup] = useState<{
         message: string;
@@ -46,6 +52,7 @@ const StorePage: React.FC = () => {
         title: false,
         description: false,
     });
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     const navigate = useNavigate();
 
@@ -72,6 +79,37 @@ const StorePage: React.FC = () => {
     const handleInput = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormState((prev) => ({ ...prev, [name]: value }));
+
+        if (name === "price") {
+            if (!/^\d*(\.\d{0,2})?$/.test(value)) {
+                setFormErrors((prev) => ({
+                    ...prev,
+                    price: "Price must be a number with up to two decimal places.",
+                }));
+            } else if (parseFloat(value) <= 0) {
+                setFormErrors((prev) => ({
+                    ...prev,
+                    price: "Price must be greater than 0.",
+                }));
+            } else {
+                setFormErrors((prev) => ({ ...prev, price: undefined }));
+            }
+        }
+
+        if (name === "stock") {
+            if (
+                !/^\d+$/.test(value) ||
+                parseInt(value, 10) < 1 ||
+                parseInt(value, 10) > 10000
+            ) {
+                setFormErrors((prev) => ({
+                    ...prev,
+                    stock: "Stock must be an integer between 1 and 10000.",
+                }));
+            } else {
+                setFormErrors((prev) => ({ ...prev, stock: undefined }));
+            }
+        }
     };
 
     const handleFiles = (e: ChangeEvent<HTMLInputElement>) => {
@@ -151,6 +189,15 @@ const StorePage: React.FC = () => {
             return;
         }
 
+        if (formErrors.price || formErrors.stock) {
+            setPopup({
+                message: "Please fix the errors before submitting",
+                type: "error",
+            });
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
             if (editing) {
                 await updateProduct(editing.id, {
@@ -177,6 +224,8 @@ const StorePage: React.FC = () => {
         } catch (err: any) {
             const msg = err.response?.data?.errors?.[0]?.msg || "Operation failed";
             setPopup({ message: msg, type: "error" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -190,6 +239,7 @@ const StorePage: React.FC = () => {
             images: [],
         });
         setFormVisible(true);
+        window.scrollTo(0, 0);
     };
 
     const confirmDelete = async (id: number) => {
@@ -214,7 +264,7 @@ const StorePage: React.FC = () => {
             )}
 
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold text-gray-900">My Store</h1>
+                <h1 className="text-4xl font-bold" style={{ color: "var(--color-primary)" }}>My Store</h1>
                 <button
                     onClick={() => {
                         formVisible ? resetForm() : setFormVisible(true);
@@ -226,185 +276,185 @@ const StorePage: React.FC = () => {
             </div>
 
             {formVisible && (
-                <form
-                    onSubmit={handleSubmit}
-                    className="bg-white p-6 rounded-lg shadow mb-8"
-                >
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className="block text-gray-700">Title</label>
-                            <div className="flex items-center">
+                <div className="card mb-8">
+                    <form onSubmit={handleSubmit}>
+                        <div className="grid gap-6 md:grid-cols-2">
+                            <div>
+                                <label className="block font-semibold mb-1">Title</label>
                                 <input
                                     name="title"
                                     value={formState.title}
                                     onChange={handleInput}
-                                    className="form-input mt-1 w-full"
+                                    className="form-input"
                                 />
                                 <button
                                     type="button"
                                     onClick={handleGenerateTitle}
-                                    className="ml-2 btn btn-sm btn-ai"
+                                    className="btn btn-ai w-full mt-2"
                                     disabled={isGenerating.title}
                                 >
-                                    {isGenerating.title ? "..." : "✨ AI"}
+                                    {isGenerating.title
+                                        ? "Generating..."
+                                        : "✨ AI Generate Title"}
                                 </button>
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700">Price ($)</label>
-                            <input
-                                name="price"
-                                type="number"
-                                step="0.01"
-                                value={formState.price}
-                                onChange={handleInput}
-                                className="form-input mt-1 w-full"
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-gray-700">Description</label>
-                            <div className="flex items-start">
+                            <div>
+                                <label className="block font-semibold mb-1">Price ($)</label>
+                                <input
+                                    name="price"
+                                    type="number"
+                                    step="0.01"
+                                    value={formState.price}
+                                    onChange={handleInput}
+                                    className="form-input"
+                                />
+                                {formErrors.price && (
+                                    <p className="text-sm mt-1" style={{ color: "var(--color-error)" }}>
+                                        {formErrors.price}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block font-semibold mb-1">Description</label>
                                 <textarea
                                     name="description"
                                     value={formState.description}
                                     onChange={handleInput}
-                                    rows={3}
-                                    className="form-input mt-1 w-full"
+                                    rows={4}
+                                    className="form-input"
                                 />
                                 <button
                                     type="button"
                                     onClick={handleGenerateDescription}
-                                    className="ml-2 btn btn-sm btn-ai"
+                                    className="btn btn-ai w-full mt-2"
                                     disabled={isGenerating.description}
                                 >
-                                    {isGenerating.description ? "..." : "✨ AI"}
+                                    {isGenerating.description
+                                        ? "Generating..."
+                                        : "✨ AI Generate Description"}
                                 </button>
                             </div>
+                            <div>
+                                <label className="block font-semibold mb-1">Stock</label>
+                                <input
+                                    name="stock"
+                                    type="number"
+                                    min="1"
+                                    max="10000"
+                                    value={formState.stock}
+                                    onChange={handleInput}
+                                    className="form-input"
+                                />
+                                {formErrors.stock && (
+                                    <p className="text-sm mt-1" style={{ color: "var(--color-error)" }}>
+                                        {formErrors.stock}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block font-semibold mb-1">Images</label>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleFiles}
+                                    className="form-input"
+                                />
+                                {(formState.images.length > 0 ||
+                                    (editing && editing.images.length > 0)) && (
+                                    <div className="mt-4 flex space-x-2 overflow-x-auto">
+                                        {formState.images.length > 0
+                                            ? formState.images.map((file, idx) => (
+                                                <img
+                                                    key={idx}
+                                                    src={URL.createObjectURL(file)}
+                                                    alt={`preview-${idx}`}
+                                                    className="h-24 w-24 object-cover rounded-lg border-2"
+                                                    style={{ borderColor: "var(--color-border)" }}
+                                                />
+                                            ))
+                                            : editing!.images.map((imgObj, idx) => {
+                                                const blob = new Blob(
+                                                    [Uint8Array.from(imgObj.imageData.data)],
+                                                    { type: "image/png" }
+                                                );
+                                                return (
+                                                    <img
+                                                        key={idx}
+                                                        src={URL.createObjectURL(blob)}
+                                                        alt={`existing-${idx}`}
+                                                        className="h-24 w-24 object-cover rounded-lg border-2"
+                                                        style={{ borderColor: "var(--color-border)" }}
+                                                    />
+                                                );
+                                            })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-gray-700">Stock</label>
-                            <input
-                                name="stock"
-                                type="number"
-                                value={formState.stock}
-                                onChange={handleInput}
-                                className="form-input mt-1 w-full"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700">Images</label>
-                            <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={handleFiles}
-                                className="mt-1"
-                            />
-                            {(formState.images.length > 0 ||
-                                (editing && editing.images.length > 0)) && (
-                                <div className="mt-2 flex space-x-2 overflow-x-auto">
-                                    {formState.images.length > 0
-                                        ? formState.images.map((file, idx) => (
-                                              <img
-                                                  key={idx}
-                                                  src={URL.createObjectURL(file)}
-                                                  alt={`preview-${idx}`}
-                                                  className="h-20 w-20 object-cover rounded"
-                                              />
-                                          ))
-                                        : editing!.images.map((imgObj, idx) => {
-                                              const blob = new Blob(
-                                                  [
-                                                      Uint8Array.from(
-                                                          imgObj.imageData.data
-                                                      ),
-                                                  ],
-                                                  { type: "image/png" }
-                                              );
-                                              return (
-                                                  <img
-                                                      key={idx}
-                                                      src={URL.createObjectURL(blob)}
-                                                      alt={`existing-${idx}`}
-                                                      className="h-20 w-20 object-cover rounded"
-                                                  />
-                                              );
-                                          })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <button type="submit" className="mt-4 btn btn-secondary">
-                        {editing ? "Update Product" : "Create Product"}
-                    </button>
-                </form>
+                        <button
+                            type="submit"
+                            className="btn btn-primary w-full mt-6"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? editing
+                                    ? "Updating..."
+                                    : "Creating..."
+                                : editing
+                                    ? "Update Product"
+                                    : "Create Product"}
+                        </button>
+                    </form>
+                </div>
             )}
 
             {loading ? (
-                <div className="text-center py-16 text-gray-600">Loading...</div>
+                <div className="text-center py-16" style={{ color: "var(--color-text-muted)" }}>Loading products...</div>
             ) : error ? (
                 <div className="alert alert-error text-center">{error}</div>
             ) : (
                 <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {products.map((p) => (
-                        <div
-                            key={p.id}
-                            className="bg-white rounded-lg shadow hover:shadow-lg transition flex flex-col"
-                        >
-                            <Link
-                                to={`/products/${p.id}`}
-                                className="block overflow-hidden rounded-t-lg"
-                            >
+                        <div key={p.id} className="card flex flex-col">
+                            <Link to={`/products/${p.id}`} className="block overflow-hidden rounded-t-lg -m-6 mb-0">
                                 {p.images[0] ? (
                                     <img
                                         src={URL.createObjectURL(
-                                            new Blob(
-                                                [
-                                                    Uint8Array.from(
-                                                        p.images[0].imageData.data
-                                                    ),
-                                                ],
-                                                {
-                                                    type: "image/png",
-                                                }
-                                            )
+                                            new Blob([Uint8Array.from(p.images[0].imageData.data)], { type: "image/png" })
                                         )}
                                         alt={p.title}
-                                        className="w-full h-48 object-cover"
+                                        className="w-full h-56 object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">
+                                    <div className="w-full h-56 flex items-center justify-center" style={{ backgroundColor: "var(--color-background)", color: "var(--color-text-muted)" }}>
                                         No Image
                                     </div>
                                 )}
                             </Link>
-                            <div className="p-4 flex-1 prose">
-                                <Link to={`/products/${p.id}`}>
-                                    <h2 className="text-lg font-semibold text-gray-900 hover:text-primary">
+                            <div className="pt-4 flex-1 flex flex-col">
+                                <Link to={`/products/${p.id}`} className="flex-1 product-details-link">
+                                    <h2 className="text-lg font-bold">
                                         <ReactMarkdown>{p.title}</ReactMarkdown>
                                     </h2>
-                                    <div className="text-gray-600 mt-1 line-clamp-2">
+                                    <div className="mt-1 text-sm line-clamp-2" style={{ color: "var(--color-text-muted)" }}>
                                         <ReactMarkdown>{p.description}</ReactMarkdown>
                                     </div>
                                 </Link>
                             </div>
-                            <div className="p-4 border-t border-gray-100 flex items-center justify-between">
-                                <span className="text-primary font-bold">${p.price}</span>
-                                <span className="text-gray-500 text-sm">
+                            <div className="pt-4 mt-auto border-t flex items-center justify-between" style={{ borderColor: "var(--color-border)" }}>
+                                <span className="font-bold text-xl" style={{ color: "var(--color-primary)" }}>
+                                    ${p.price}
+                                </span>
+                                <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
                                     Stock: {p.stock}
                                 </span>
                             </div>
-                            <div className="p-4 border-t border-gray-100 flex space-x-2">
-                                <button
-                                    onClick={() => startEditing(p)}
-                                    className="flex-1 btn btn-primary"
-                                >
+                            <div className="pt-4 mt-4 border-t grid grid-cols-2 gap-3" style={{ borderColor: "var(--color-border)" }}>
+                                <button onClick={() => startEditing(p)} className="btn btn-secondary w-full">
                                     Edit
                                 </button>
-                                <button
-                                    onClick={() => confirmDelete(p.id)}
-                                    className="flex-1 btn btn-error"
-                                >
+                                <button onClick={() => confirmDelete(p.id)} className="btn btn-error w-full">
                                     Delete
                                 </button>
                             </div>

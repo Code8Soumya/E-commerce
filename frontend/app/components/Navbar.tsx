@@ -51,12 +51,12 @@ const Navbar: React.FC = () => {
                         Cart
                     </NavLink>
                     <NavLink
-                        to="/order"
+                        to="/orders"
                         className={({ isActive }) =>
                             isActive ? activeLinkClasses : linkClasses
                         }
                     >
-                        Order
+                        Orders
                     </NavLink>
                 </div>
                 <div className="flex items-center space-x-4">
