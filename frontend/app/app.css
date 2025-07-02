@@ -1,12 +1,5 @@
 @import "tailwindcss";
 
-/* 
-=================================================================
-🎨 COLOR & FONT DEFINITIONS
-- Uses CSS variables for a consistent and maintainable theme.
-- Palette is based on the "Friendly & Youthful (Vibrant)" scheme.
-=================================================================
-*/
 :root {
   /* Core Palette */
   --color-primary: #8B5CF6;

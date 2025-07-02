@@ -68,7 +68,7 @@ export const deleteProductFromPinecone = async (productId: string) => {
 export const searchProductsInPinecone = async (
     queryText: string,
     topK: number = 10,
-    minSimilarityScore: number = 0.5
+    minSimilarityScore: number = 0.2
 ): Promise<string[]> => {
     if (!pineconeIndex) {
         console.error("Pinecone index not initialized.");

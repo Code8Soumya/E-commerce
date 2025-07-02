@@ -3,30 +3,33 @@
     "version": "1.0.0",
     "description": "",
     "main": "app.js",
-    "type": "module",
     "scripts": {
         "dev": "node --import=tsx --env-file=.env --watch app.ts",
-        "db": "node sqlconfig.ts"
+        "build": "tsc",
+        "package": "npm run build && npm prune --omit=dev && powershell Compress-Archive -Path dist,node_modules -DestinationPath function.zip -Force"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@google/genai": "^1.7.0",
+        "@google/genai": "^1.8.0",
         "@pinecone-database/pinecone": "^6.1.1",
         "bcryptjs": "^3.0.2",
         "cors": "^2.8.5",
-        "dotenv": "^17.0.0",
+        "dotenv": "^17.0.1",
         "express": "^5.1.0",
         "express-validator": "^7.2.1",
         "jsonwebtoken": "^9.0.2",
         "multer": "^2.0.1",
-        "mysql2": "^3.14.1"
+        "mysql2": "^3.14.1",
+        "serverless-http": "^3.2.0"
     },
     "devDependencies": {
+        "@types/aws-lambda": "^8.10.150",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.3",
         "@types/jsonwebtoken": "^9.0.10",
-        "@types/multer": "^1.4.13",
+        "@types/multer": "^2.0.0",
+        "@types/node": "^24.0.10",
         "tsx": "^4.20.3",
         "typescript": "^5.8.3"
     }

@@ -1,21 +1,27 @@
 {
     "compilerOptions": {
-        "module": "ESNext", // Use ESNext for ESM
-        "target": "ES2020", // Target modern ECMAScript versions
+        "allowJs": true,
+        "module": "CommonJS",
         "moduleResolution": "node",
+        "target": "ES2020",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
-        "outDir": "./dist", // Output directory for compiled files
-        "strict": true, // Enable strict type-checking options
-        "skipLibCheck": true, // Skip type checking of declaration files
-        "resolveJsonModule": true, // Include JSON imports
-        "forceConsistentCasingInFileNames": true,
-        "noEmit": false, // Allow emitting output
-        "isolatedModules": true, // Required for using ESM modules
-        "baseUrl": ".", // Allow absolute imports relative to project root
-        "paths": {
-            "*": ["node_modules/*"],
-            "@models/*": ["models/*"]
-        }
-    }
+        "outDir": "./dist",
+        "rootDir": ".",
+        "strict": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": [
+        "app.ts",
+        "lambda.ts",
+        "config/**/*.ts",
+        "controllers/**/*.ts",
+        "routes/**/*.ts",
+        "middlewares/**/*.ts",
+        "libs/**/*.ts",
+        "models/**/*.ts"
+    ],
+    "exclude": ["node_modules", "dist"]
 }

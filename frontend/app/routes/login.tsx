@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../lib/api";
+import api, { isTokenExpired } from "../lib/api";
 import Popup from "../components/Popup";
 
 export default function Login() {
@@ -15,8 +15,10 @@ export default function Login() {
 
     useEffect(() => {
         const token = localStorage.getItem("token");
-        if (token) {
+        if (token && !isTokenExpired(token)) {
             setIsLoggedIn(true);
+        } else {
+            localStorage.removeItem("token");
         }
     }, []);
 
@@ -34,11 +36,14 @@ export default function Login() {
                 localStorage.setItem("token", data.token);
                 setPopup({ message: "Login successful", type: "success" });
                 setTimeout(() => {
-                    window.location.href = "/profile";
+                    navigate("/profile");
                 }, 1500);
             } else {
                 setPopup({ message: data.message || "Login failed", type: "error" });
             }
+            setEmail("");
+            setPassword("");
+            return;
         } catch (error: any) {
             if (error.response && error.response.data) {
                 const errData = error.response.data;

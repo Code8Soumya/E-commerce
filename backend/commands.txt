@@ -1,5 +1,0 @@
-npx ncu -u
-npm install
-
-
-npx tsx backend/test_pinecone_upsert.js

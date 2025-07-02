@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 const Navbar: React.FC = () => {
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-    const navigate = useNavigate();
+const navigate = useNavigate();
+const location = useLocation();
 
     useEffect(() => {
         const token = localStorage.getItem("token");
         setIsLoggedIn(!!token);
-    }, []);
+    }, [location]);
 
     const handleLogout = () => {
         localStorage.removeItem("token");

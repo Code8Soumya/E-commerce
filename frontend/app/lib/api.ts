@@ -3,7 +3,7 @@ import type { Product } from "./types";
 
 // Create an axios instance
 const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: "https://el6a2e8kbg.execute-api.ap-south-1.amazonaws.com/api",
 });
 
 // Add a request interceptor to include JWT token
@@ -11,6 +11,11 @@ api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
         if (token) {
+            if (isTokenExpired(token)) {
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+                return Promise.reject(new Error("Token expired"));
+            }
             config.headers = config.headers ?? {};
             config.headers["Authorization"] = `Bearer ${token}`;
         }
@@ -119,7 +124,12 @@ export const searchProducts = async (
     // The backend returns { products: [], total: 0 } when no products are found,
     // and an array of products directly when products are found.
     // We need to handle both cases to ensure searchResults is always an array.
-    if (response.data && typeof response.data === 'object' && 'products' in response.data && Array.isArray(response.data.products)) {
+    if (
+        response.data &&
+        typeof response.data === "object" &&
+        "products" in response.data &&
+        Array.isArray(response.data.products)
+    ) {
         return response.data.products;
     }
     return response.data; // This will be an array if products were found directly
@@ -157,4 +167,19 @@ export const clearCart = async (): Promise<CartWithItems> => {
     const response = await api.delete("/cart");
     return response.data;
 };
+export function isTokenExpired(token: string): boolean {
+    if (typeof window === "undefined") {
+        // Skip expiry check during SSR
+        return false;
+    }
+    try {
+        const payloadBase64 = token.split(".")[1];
+        const decodedStr = atob(payloadBase64);
+        const { exp } = JSON.parse(decodedStr) as { exp: number };
+        return Date.now() / 1000 >= exp;
+    } catch {
+        return true;
+    }
+}
+
 export default api;
